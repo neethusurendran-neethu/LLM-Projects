@@ -2,9 +2,9 @@ import streamlit as st
 import tempfile
 import os
 
-from langchain.document_loaders import TextLoader, PyPDFLoader
+from langchain_community.document_loaders import TextLoader, PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.vectorstores import FAISS
+from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.llms import HuggingFaceHub
 from langchain.chains import RetrievalQA

@@ -34,24 +34,22 @@ Before running this application, ensure you have:
 
 1. Clone or download this repository to your local machine
 2. Install the required Python dependencies:
-
-```bash
-pip install streamlit requests openai-whisper
-```
+   ```bash
+   pip install streamlit requests openai-whisper
+   ```
 
 3. Install the required models in Ollama:
-
-```bash
-ollama pull llama3
-ollama pull llava
-```
+   ```bash
+   ollama pull llama3
+   ollama pull llava
+   ```
 
 ## 🔧 Configuration
 
 The application uses the following default configuration:
 
 - Ollama API endpoint: `http://localhost:11434/api/generate`
-- Default text model: `llama3`
+- Default text model: `tinyllama` (changed from llama3 for better compatibility)
 - Default image model: `llava`
 - Whisper model used: `base` (can be changed to `small` or `medium` for higher accuracy)
 
@@ -94,7 +92,7 @@ All communication with Ollama is handled through the `/api/generate` endpoint wi
 
 ## 🤖 Model Information
 
-- **Llama3**: Advanced language model for text generation and understanding
+- **Llama3/tinyllama**: Advanced language model for text generation and understanding (updated to use tinyllama by default)
 - **LLaVA**: Large Language and Vision Assistant for multimodal tasks
 - **Whisper**: Robust speech recognition model for audio transcription
 
@@ -104,6 +102,7 @@ All communication with Ollama is handled through the `/api/generate` endpoint wi
 - Image analysis requires the LLaVA model to be pulled in Ollama prior to use
 - The application assumes Ollama is running on the default port (11434)
 - Large audio files may take longer to transcribe
+- Some image formats might not be supported by all Ollama models
 
 ## 🔒 Privacy & Security
 
@@ -113,9 +112,20 @@ All communication with Ollama is handled through the `/api/generate` endpoint wi
 
 ## 🐛 Troubleshooting
 
-- If you encounter issues with Ollama API calls, verify that Ollama is running and the required models are installed
-- For audio transcription issues, ensure that your system has enough memory and computational resources
-- Make sure file sizes are within the supported limits (200MB for images)
+**Issue**: "Connection refused" or "Connection error"
+- **Solution**: Verify Ollama is running locally with `ollama serve`
+
+**Issue**: "Model not found" error
+- **Solution**: Install the required models: `ollama pull llama3` and `ollama pull llava`
+
+**Issue**: Audio transcription is slow or fails
+- **Solution**: Try using a smaller audio file or install a larger Whisper model: `pip install openai-whisper[large]`
+
+**Issue**: Large image upload fails
+- **Solution**: The application may have limits on image size; try using smaller images
+
+**Issue**: Image analysis returns generic response
+- **Solution**: Make sure the LLaVA model is properly installed and working with Ollama
 
 ## 📞 Support
 

@@ -1,4 +1,9 @@
 import streamlit as st
+import warnings
+# Suppress all torch classes warnings
+warnings.filterwarnings("ignore", message=".*Tried to instantiate class.*")
+warnings.filterwarnings("ignore", category=UserWarning, module="torch")
+
 from transformers import pipeline
 
 # Load local summarizer

@@ -12,6 +12,10 @@ with st.sidebar:
 if "history" not in st.session_state:
     st.session_state.history = []
 
+# Track if we just processed a message to avoid duplicate processing
+if "processing" not in st.session_state:
+    st.session_state.processing = False
+
 # Create two tabs
 tab1, tab2 = st.tabs(["💬 Chat", "📜 History"])
 
@@ -44,8 +48,9 @@ with tab1:
         st.rerun()
 
     # Show conversation
-    for speaker, message in st.session_state.history:
-        st.markdown(f"**{speaker}:** {message}")
+    if st.session_state.history:
+        for speaker, message in st.session_state.history:
+            st.markdown(f"**{speaker}:** {message}")
 
 # --- Tab 2: Full History ---
 with tab2:

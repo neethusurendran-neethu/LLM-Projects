@@ -1,0 +1,11 @@
+streamlit
+openai-whisper
+transformers[torch]
+pydub
+numpy
+torch
+
+# Note: For full audio support, install system-level ffmpeg
+# Ubuntu/Debian: sudo apt install ffmpeg
+# macOS: brew install ffmpeg
+# Windows: Download from https://ffmpeg.org/

@@ -1,113 +1,93 @@
+# app.py
 import streamlit as st
 import requests
-import base64
 import tempfile
+import os
+import base64
 import json
-import whisper
 
-# ---------------------------
-# CONFIG
-# ---------------------------
-OLLAMA_API = "http://localhost:11434/api/generate"
+st.set_page_config(page_title="Multi-Modal Assistant", page_icon="🖼️")
+st.title("🖼️ Local Multi-Modal Assistant (Ollama + Streamlit)")
+st.write("Ask questions about images + text, fully offline.")
 
-st.set_page_config(page_title="LLM Multimedia Assistant", layout="wide")
-st.title("LLM Multimedia Assistant (Streamlit + Ollama)")
+# Model selection dropdown
+model = st.selectbox("Select Model", 
+                     ["llava:latest", "llava:7b", "llava:13b"], 
+                     index=0,
+                     help="Choose a model variant based on your system's memory capacity. Smaller models require less memory.")
 
-# ---------------------------
-# HELPER: handle streaming responses from Ollama
-# ---------------------------
-def ollama_generate(payload):
-    """Send prompt to Ollama API and collect streaming response."""
-    try:
-        response = requests.post(OLLAMA_API, json=payload, stream=True)
-        response.raise_for_status()
-        full_reply = ""
-        
-        for line in response.iter_lines():
-            if line:
-                try:
-                    data = json.loads(line.decode("utf-8"))
-                    if "response" in data:
-                        full_reply += data["response"]
-                    elif "error" in data:
-                        return f"Error from Ollama: {data['error']}"
-                except json.JSONDecodeError:
-                    continue
-        return full_reply.strip()
-    except requests.exceptions.RequestException as e:
-        return f"Connection error: {str(e)}"
-    except Exception as e:
-        return f"Error processing response: {str(e)}"
+st.info("💡 Tip: If you encounter memory errors, try using a smaller model variant from the dropdown above.")
 
-# ---------------------------
-# TEXT CHAT
-# ---------------------------
-st.header("💬 Chat with Ollama (Text Models)")
-user_input = st.text_input("Enter your message:")
+question = st.text_area("Enter your question:", "What is in this image?")
+uploaded_file = st.file_uploader("Upload an image:", type=["png", "jpg", "jpeg"])
 
-if st.button("Send Text"):
-    if user_input.strip():
-        with st.spinner("Thinking..."):
-            try:
-                reply = ollama_generate({
-                    "model": "tinyllama",  # Using tinyllama which is commonly available
-                    "prompt": user_input
-                })
-                if reply:
-                    st.success(reply)
-                else:
-                    st.error("No response received from the model. Check if Ollama is running and the model is installed.")
-            except Exception as e:
-                st.error(f"Error communicating with Ollama: {str(e)}. Make sure Ollama is running with 'ollama serve'.")
-
-# ---------------------------
-# IMAGE ANALYSIS
-# ---------------------------
-st.header("🖼️ Image Understanding with Ollama (llava)")
-
-uploaded_file = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
-if uploaded_file is not None:
-    st.image(uploaded_file, caption="Uploaded Image", use_column_width=True)
-
-    if st.button("Analyze Image"):
-        img_bytes = uploaded_file.read()
-        img_b64 = base64.b64encode(img_bytes).decode("utf-8")
-
-        with st.spinner("Analyzing image..."):
-            try:
-                desc = ollama_generate({
-                    "model": "llava",
-                    "prompt": "Describe this image in detail",
-                    "images": [img_b64],
-                })
-                if desc:
-                    st.success(desc)
-                else:
-                    st.error("No response received from the image analysis model. Check if Ollama is running and the LLaVA model is installed.")
-            except Exception as e:
-                st.error(f"Error analyzing image: {str(e)}. Make sure Ollama is running with 'ollama serve' and LLaVA model is installed.")
-
-# ---------------------------
-# AUDIO TRANSCRIPTION
-# ---------------------------
-st.header("🎙️ Audio Transcription with Whisper")
-
-audio_file = st.file_uploader("Upload an audio file", type=["mp3", "wav", "m4a"])
-if audio_file is not None:
-    st.audio(audio_file)
-
-    if st.button("Transcribe Audio"):
-        with tempfile.NamedTemporaryFile(delete=False) as tmp:
-            tmp.write(audio_file.read())
-            tmp_path = tmp.name
-
+def ask_ollama(question, image_path=None, model_name="llava:latest"):
+    """Ask Ollama using the API endpoint"""
+    url = "http://localhost:11434/api/generate"
+    
+    # Prepare the request data
+    data = {
+        "model": model_name,
+        "prompt": question,
+        "stream": False
+    }
+    
+    # If image is provided, encode it and add to the request
+    if image_path:
         try:
-            with st.spinner("Transcribing audio..."):
-                model = whisper.load_model("base")  # you can use "small" or "medium" if you want more accuracy
-                result = model.transcribe(tmp_path)
-                if result["text"]:
-                    st.success(result["text"])
-                else:
-                    st.warning("No speech detected in the audio file.")
+            with open(image_path, "rb") as image_file:
+                image_data = base64.b64encode(image_file.read()).decode('utf-8')
+                data["images"] = [image_data]
         except Exception as e:
-            st.error(f"Error transcribing audio: {str(e)}. Make sure the audio file is valid and Whisper is properly installed.")
+            return f"Error processing image: {str(e)}"
+    
+    try:
+        # Use longer timeout for image processing
+        timeout = 120 if image_path else 60
+        
+        response = requests.post(url, json=data, timeout=timeout)
+        
+        if response.status_code == 200:
+            result = response.json()
+            return result.get("response", "No response received")
+        elif response.status_code == 404:
+            st.error(f"Model '{model_name}' not found. Please pull the model using the following command:")
+            st.code(f"ollama pull {model_name}")
+            return f"Error: {response.status_code} - {response.text}"
+        elif response.status_code == 500 and "more system memory" in response.text:
+            st.error("Not enough memory to load the selected model.")
+            st.info("Please select a smaller model from the dropdown, or free up system memory by closing other applications.")
+            return f"Error: {response.status_code} - {response.text}"
+        else:
+            st.error(f"API Error: {response.status_code}")
+            return f"Error: {response.status_code} - {response.text}"
+            
+    except requests.exceptions.Timeout:
+        return "Request timed out. The model might be busy processing another request. Please try again in a few moments."
+    except requests.exceptions.ConnectionError:
+        return "Connection error. Please make sure Ollama is running (ollama serve)."
+    except requests.exceptions.RequestException as e:
+        return f"Request error: {str(e)}"
+    except Exception as e:
+        return f"Unexpected error: {str(e)}"
+
+if st.button("Ask"):
+    if not question and not uploaded_file:
+        st.warning("Please enter a question or upload an image.")
+    else:
+        image_path = None
+        if uploaded_file:
+            with st.spinner("Processing image..."):
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
+                    tmp.write(uploaded_file.read())
+                    image_path = tmp.name
+                st.image(image_path, caption="Uploaded Image", use_column_width=True)
+
+        with st.spinner("Thinking locally..."):
+            answer = ask_ollama(question, image_path, model)
+
+        st.subheader("💡 Answer:")
+        st.write(answer)
+
+        if image_path:
+            os.remove(image_path)

@@ -51,7 +51,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Default model
-model_name = "mistral"
+model_name = "tinyllama"
 
 uploaded = st.file_uploader("Upload PDF or TXT", type=["pdf", "txt"])
 

@@ -1,132 +1,85 @@
-# LLM Multi-Modal Assistant
+# Local Multi-Modal Assistant (Ollama + Streamlit)
 
-A comprehensive multi-modal assistant built with Streamlit that integrates text, image, and audio processing capabilities using Ollama and OpenAI Whisper.
+## Setup and Installation
 
-## 🚀 Features
-
-- **Text Chat**: Interactive text-based conversations using Ollama's language models
-- **Image Understanding**: Visual analysis and description of uploaded images using the LLaVA model
-- **Audio Transcription**: Speech-to-text transcription of audio files using OpenAI Whisper
-
-## 🛠️ Tech Stack
-
-- **Frontend**: Streamlit (UI framework)
-- **Backend**: Python
-- **LLM Integration**: Ollama API
-- **Models Used**:
-  - Llama3 (for text processing)
-  - LLaVA (for image understanding)
-  - Whisper (for audio transcription)
-- **Audio Processing**: OpenAI Whisper
-- **API Communication**: Requests library
-
-## 📋 Prerequisites
-
-Before running this application, ensure you have:
-
-1. **Python 3.8+** installed
-2. **Ollama** running locally (accessible at `http://localhost:11434`)
-3. **Llama3 model** installed in Ollama (`ollama pull llama3`)
-4. **LLaVA model** installed in Ollama (`ollama pull llava`)
-5. **Required Python libraries** (streamlit, requests, openai-whisper)
-
-## 📦 Installation
-
-1. Clone or download this repository to your local machine
-2. Install the required Python dependencies:
+1. Install required Python packages:
    ```bash
-   pip install streamlit requests openai-whisper
+   pip install streamlit requests
    ```
 
-3. Install the required models in Ollama:
-   ```bash
-   ollama pull llama3
-   ollama pull llava
-   ```
+2. Install Ollama from https://ollama.ai/
 
-## 🔧 Configuration
+3. Pull a model variant appropriate for your system memory:
+   - For systems with limited memory: `ollama pull llava:3.2`
+   - For systems with more memory: `ollama pull llava:7b` or `ollama pull llava`
 
-The application uses the following default configuration:
+## Objective
+Build a Streamlit application that allows users to ask questions about images and text using a local Ollama model. The app should work fully offline and handle both text-only and image+text queries.
 
-- Ollama API endpoint: `http://localhost:11434/api/generate`
-- Default text model: `tinyllama` (changed from llama3 for better compatibility)
-- Default image model: `llava`
-- Whisper model used: `base` (can be changed to `small` or `medium` for higher accuracy)
+## Topics Learned
+1. **Streamlit Basics**  
+   - Created text input areas using `st.text_area()`.  
+   - Handled file uploads with `st.file_uploader()`.  
+   - Displayed uploaded images using `st.image()`.  
+   - Used buttons (`st.button()`) to trigger actions and `st.spinner()` to show processing status.  
+   - Provided user feedback using `st.warning()` and `st.error()`.
 
-## ▶️ Running the Application
+2. **Local Ollama API Integration**  
+   - Interfaced with Ollama’s local API endpoint (`http://localhost:11434/api/generate`).  
+   - Sent JSON requests containing the model, prompt, and optional images.  
+   - Handled the JSON response to extract the model’s answer.
 
-1. Ensure Ollama is running locally:
-   ```bash
-   ollama serve
-   ```
+3. **Image Handling**  
+   - Saved uploaded images to a temporary file using `tempfile.NamedTemporaryFile`.  
+   - Encoded images in Base64 before sending to the Ollama API.  
+   - Cleaned up temporary files after processing to avoid disk clutter.
 
-2. Run the Streamlit application:
-   ```bash
-   streamlit run app.py
-   ```
+4. **Error Handling**  
+   - Managed request timeouts using different timeout settings for text-only vs. image queries.  
+   - Caught connection errors, general request exceptions, and unexpected errors.  
+   - Displayed meaningful error messages to the user.
 
-3. Open your web browser and navigate to `http://localhost:8501`
+5. **Offline Multi-Modal Processing**  
+   - Used Ollama’s `llava` model locally, avoiding reliance on external servers.  
+   - Designed the app to handle both pure text and text+image inputs.
 
-## 📖 Usage
+---
 
-### Text Chat
-1. Type your message in the text input field
-2. Click "Send Text" to get a response from the Llama3 model
+## Issues Encountered and Solutions
+1. **Timeouts for Image Queries**  
+   - Problem: Image processing takes longer than text-only requests.  
+   - Solution: Set a longer timeout (`timeout=120`) when sending requests with images.
 
-### Image Understanding
-1. Upload an image file (JPG, JPEG, PNG)
-2. Click "Analyze Image" to get a detailed description using the LLaVA model
+2. **Temporary File Management**  
+   - Problem: Uploaded images need to be written to disk before encoding.  
+   - Solution: Used `tempfile.NamedTemporaryFile` and deleted the file after processing.
 
-### Audio Transcription
-1. Upload an audio file (MP3, WAV, M4A)
-2. Click "Transcribe Audio" to convert speech to text using Whisper
+3. **Connection Errors**  
+   - Problem: Ollama server not running results in failed requests.  
+   - Solution: Added clear error messages prompting the user to run `ollama serve`.
 
-## 🏗️ Architecture
+4. **Unexpected API Responses**  
+   - Problem: API might return unexpected JSON or no `response` key.  
+   - Solution: Checked for `response` in the returned JSON and provided a fallback message.
 
-The application is structured in three main sections:
-- **Text Chat**: Direct interaction with Ollama's text models
-- **Image Analysis**: Image processing using LLaVA through Ollama API
-- **Audio Transcription**: Local audio processing with Whisper
+5. **Memory Requirements**  
+   - Problem: Default model (`llava`) requires more memory than available on the system.  
+   - Solution: Added model selection dropdown to allow using smaller model variants like `llava:3.2` or `llava:7b` which use less memory.
 
-All communication with Ollama is handled through the `/api/generate` endpoint with appropriate payload formatting for different modalities.
+---
 
-## 🤖 Model Information
+## Future Improvements
+- Add **batch image uploads** for multiple-image questions.  
+- Improve **actionable feedback** by highlighting detected objects or concepts in the image.  
+- Add **speech-to-text integration** to allow asking questions via audio.  
+- Store a **history of questions and answers** for offline reference.  
+- Enhance UI with **interactive image annotations** to show model reasoning.
 
-- **Llama3/tinyllama**: Advanced language model for text generation and understanding (updated to use tinyllama by default)
-- **LLaVA**: Large Language and Vision Assistant for multimodal tasks
-- **Whisper**: Robust speech recognition model for audio transcription
+---
 
-## ⚠️ Notes
-
-- Audio transcription happens locally using Whisper, which requires significant computational resources
-- Image analysis requires the LLaVA model to be pulled in Ollama prior to use
-- The application assumes Ollama is running on the default port (11434)
-- Large audio files may take longer to transcribe
-- Some image formats might not be supported by all Ollama models
-
-## 🔒 Privacy & Security
-
-- All text and image processing is handled through your local Ollama instance
-- Audio transcription is processed locally with Whisper
-- No data is sent to external services, ensuring privacy of your content
-
-## 🐛 Troubleshooting
-
-**Issue**: "Connection refused" or "Connection error"
-- **Solution**: Verify Ollama is running locally with `ollama serve`
-
-**Issue**: "Model not found" error
-- **Solution**: Install the required models: `ollama pull llama3` and `ollama pull llava`
-
-**Issue**: Audio transcription is slow or fails
-- **Solution**: Try using a smaller audio file or install a larger Whisper model: `pip install openai-whisper[large]`
-
-**Issue**: Large image upload fails
-- **Solution**: The application may have limits on image size; try using smaller images
-
-**Issue**: Image analysis returns generic response
-- **Solution**: Make sure the LLaVA model is properly installed and working with Ollama
-
-## 📞 Support
-
-For support, please open an issue in the repository or contact the project maintainers.
+## Outcome
+Successfully created a Streamlit app that:
+- Accepts text questions and optional images.  
+- Sends requests to a local Ollama model (`llava`) for processing.  
+- Handles offline multi-modal queries with robust error handling.  
+- Returns answers clearly, with the uploaded image displayed alongside the response.
